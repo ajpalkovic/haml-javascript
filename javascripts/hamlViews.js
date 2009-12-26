@@ -217,7 +217,7 @@ var HamlView = (function ($) {
                             
                             var attr = this.processAttributes(line.substring(c));
                             currentTag.attributes.push(attr.attributes);
-                            c += attr.length;
+                            c += attr.length-1;
                             break;
                         case '}':
                         case ')':

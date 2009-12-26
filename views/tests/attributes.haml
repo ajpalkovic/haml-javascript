@@ -27,3 +27,5 @@
 %div(class='class' id='id' title='test'+([1, 2].join('')))
 %div(class='class' id='id' title='test'+([1, 2].join('')) alt='alt')
 %div(class='class' id='id' title=({key: 'value'}).key+'test'+([1, 2].join('')) alt='alt')
+
+%div(data)(id='id'){title: 'title'}{:alt => 'alt'}
