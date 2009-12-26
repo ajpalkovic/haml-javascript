@@ -1,0 +1,42 @@
+%table.hamlTestTable
+  %tr
+    %th Name
+    %th Result
+    %th Errors
+    %th Output
+    %th Expected Output
+    %th Compile Time
+    %th Render Time
+    
+  - for result in results
+    %tr{class: 'hamlTest'+(result.success ? 'Success' : 'Fail')}
+      %td= result.name
+      %td= result.success ? 'Success' : 'Fail'
+      %td
+        - if(result.errors.length === 0)
+          None
+        - else
+          =result.errors.join('<br />')
+      %td
+        - if(result.success)
+          = result.result
+        - else
+          %strong Result:
+          <br />#{result.result}<br />
+          
+          - if(result.exception)
+            %strong Exception:
+            <br />#{HamlViews.formatObject(result.exception)}<br />
+          
+          %strong Compiled View:
+          %br
+          = result.compiledView.gsub('\n', '<br />')
+            
+      %td
+        - if(!result.success)
+          %strong Expected Result:
+          %br
+        = result.expectedResult
+        
+      %td= result.compileTime
+      %td= result.renderTime
