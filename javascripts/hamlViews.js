@@ -56,9 +56,9 @@ var HamlView = (function ($) {
         multilineStopCharacters: {'.': true, '#': true, '%': true, '{': true, ' ': true, '=': true, '-': true, '(': true},
         
         //strings representing the different types of compiled javascript
-        stringTemplate: ['o.push("', '");'],
-        codeOutputTemplate: ['o.push(', ');'],
-        tagTemplate: ['this.makeTag(', ');'],
+        stringTemplate: ['__o.push("', '");'],
+        codeOutputTemplate: ['__o.push(', ');'],
+        tagTemplate: ['__this.makeTag(', ');'],
         
         //a regular expression for matching occurances of #{expression}
         interpolationRegex: /(^|.|\r|\n)(#\{(.*?)\})/,
@@ -214,9 +214,9 @@ var HamlView = (function ($) {
         createEvalString: function() {
             var defaultsString = '{';
             if(this.defaults.length > 0) {
-                defaultsString = "var defaults = "+this.defaults+"; with(defaults) {";
+                defaultsString = "var __defaults = "+this.defaults+"; with(__defaults) {";
             }
-            var evalString = "this.renderFunction = function(data, helpers) { "+defaultsString+" with(data) { with(helpers) { var o = this.output; "+this.compiledView.join('')+" return o.join(\"\"); } } } };";
+            var evalString = "this.renderFunction = function(__data, __helpers) { "+defaultsString+" with(__data) { with(__helpers) { var __o = this.output, __this = this; "+this.compiledView.join('')+" return __o.join(\"\"); } } } };";
             this.debugStr = evalString;
             
             return evalString;
@@ -913,6 +913,9 @@ var HamlView = (function ($) {
         }
     };
     
+    /**
+     * Useful for print error messages.
+     */
     haml.formatObject = function(object) {
         var type = typeof object;
         switch (type) {
