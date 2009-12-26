@@ -1,4 +1,6 @@
 - var data = {class: 'class'};
+- var c = 'class';
+
 %div{data}
 %div{ data }
 %div{class: 'class'}
@@ -6,6 +8,7 @@
 %div{class: 'class', id: 'id'}
 %div{ class: 'class' , id: 'id'}
 %div{class: 'class', id: 'id', title: '{class: \'class\', id: "class"", :noob => /noob/}'}
+
 %div{class => 'class'}
 %div{:class => :class}
 %div{:class => :class, :id => :id}
@@ -15,7 +18,6 @@
 %div{:class => 'class', :id => 'id', :title => 'test'+([1, 2].join('')), :alt => 'alt'}
 %div{:class => 'class', :id => 'id', :title => ({key: 'value'}).key+'test'+([1, 2].join('')), :alt => 'alt'}
 
-- var c = 'class'
 %div(data)
 %div( data )
 %div(class='class')

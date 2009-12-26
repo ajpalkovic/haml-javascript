@@ -139,19 +139,14 @@ var HamlView = (function ($) {
                                 break;
                             }
                         case '-':
-                            if(currentTag.haveTag) {
-                                this.error(this.errorMessages.extraDash, {lineNumber: this.lineIndex, character: c});
-                                break;
-                            }
-                            
-                            var text = this.concatenateMultilineString(line, c);
+                            if(this.checkTagError(currentTag.haveTag, 'extraDash')) break;
                             
                             //check if it is a custom for loop
+                            var text = this.concatenateMultilineString(line, c);
                             if(text.startsWith('for') && text.include(' in ') && !text.substring(3).trim().startsWith('(')) {
                                 this.processForEach(text);
                             } else {
-                                text = this.processBracket(text);
-                                this.compiledView.push(text, '\n');
+                                this.compiledView.push(this.processBracket(text), '\n');
                             }
                             
                             c = lineLength;
@@ -165,55 +160,29 @@ var HamlView = (function ($) {
                                 this.canIndent = false;
                             }
                             
-                            var text = this.concatenateMultilineString(line, c);
-                            
-                            this.pushCodeOutput(text);
+                            this.pushCodeOutput(this.concatenateMultilineString(line, c));
                             c = lineLength;
                             break;
                         case '%':
-                            if(currentTag.haveTag) {
-                                this.error(this.errorMessages.extraPercent, {lineNumber: this.lineIndex, character: c});
-                                break;
-                            }
-                            currentTag.haveTag = true;
-                            this.findStopCharacter(characters, c+1, haml.stopCharacters, function(endIndex) {
-                                currentTag.name = line.substring(c+1, endIndex);
-                                c = endIndex - 1;
-                            });
+                            if(this.checkTagError(currentTag.haveTag, 'extraPercent')) break;
+                            c = this.updateTagAttribute(currentTag, 'name', characters, c);
                             break;
                         case '#':
                             if(characters[c+1] === '{') {
                                 this.pushInterpolatedString(line.substring(c));
                                 c = lineLength;
                             } else {
-                                if(!currentTag.haveTag) {
-                                    currentTag.haveTag = true;
-                                    currentTag.name = 'div';
-                                }
-                                
-                                this.findStopCharacter(characters, c+1, haml.stopCharacters, function(endIndex) {
-                                    currentTag.id = line.substring(c+1, endIndex);
-                                    c = endIndex - 1;
-                                });
+                                this.setDefaultTagIfNone(currentTag);
+                                c = this.updateTagAttribute(currentTag, 'id', characters, c);
                             }
                             break;
                         case '.':
-                            if(!currentTag.haveTag) {
-                                currentTag.haveTag = true;
-                                currentTag.name = 'div';
-                            }
-                            
-                            endIndex = this.findStopCharacter(characters, c+1, haml.stopCharacters, function(endIndex) {
-                                currentTag.classes.push(line.substring(c+1, endIndex));
-                                c = endIndex - 1;
-                            });
+                            this.setDefaultTagIfNone(currentTag);
+                            c = this.updateTagAttribute(currentTag, 'classes', characters, c);
                             break;
                         case '{':
                         case '(':
-                            if(!currentTag.haveTag) {
-                                this.error(this.errorMessages.extraOpenBracket, {lineNumber: this.lineIndex, character: c});
-                                break;
-                            }
+                            if(this.checkTagError(!currentTag.haveTag, 'extraOpenBracket', c)) break;
                             
                             var attr = this.processAttributes(line.substring(c));
                             currentTag.attributes.push(attr.attributes);
@@ -269,10 +238,49 @@ var HamlView = (function ($) {
         },
         
         /**
+         * Updates the currentTag variable with the default tag values.
+         * For instance, if we see just #id, that has to be a div tag.
+         */
+        setDefaultTagIfNone: function(tag) {
+            if(!tag.haveTag) {
+                tag.haveTag = true;
+                tag.name = 'div';
+            }
+        },
+        
+        /**
+         * Helper method that checks for error conditions when parsing tags.
+         */
+        checkTagError: function(condition, error, c) {
+            if(condition) {
+                this.error(this.errorMessages['error'], {lineNumber: this.lineIndex, character: c});
+            }
+            return condition;
+        },
+        
+        /**
+         * Finds the end of an individual attribute in a tag and updates that key in the currentTag variable.
+         * For instance, %strong.class would first match 'strong'.  Calling it again matches 'class'.
+         */
+        updateTagAttribute: function(tag, attribute, characters, c) {   
+            endIndex = this.findStopCharacter(characters, c+1, haml.stopCharacters);
+            var value = line.substring(c+1, endIndex);
+            if(attribute == 'classes')
+                tag[attribute].push(value);
+            else
+                tag[attribute] = value;
+            tag.haveTag = true;
+            return endIndex - 1;
+        },
+        
+        
+        
+        /**
          * Returns an object containing two keys:
          *   attributes: a string to be passed into the compiled view representing the attributes of the tag.
          *               The return value will always be either a variable name or a json object.
          *               However, a ruby-style hash may be used in the view and it will be converted to a json object.
+         *               HTML style attributes may also be used.
          *   length: The size of the original attribute string so the main loop can advance accordingly.
          */
         processAttributes: function(str) {
@@ -851,16 +859,15 @@ var HamlView = (function ($) {
          * This indicates a token, a sequence of characters, and the callback function will be called with the sequence
          * e.g: %strong.class will have two tokens, strong and class
          */
-        findStopCharacter: function(line, start, characters, callback) {
+        findStopCharacter: function(line, start, characters) {
             //find characters like .#{} that indicated the start of a tag/class/id etc
             var length = line.length;
             for(; start < length; start++) {
                 if(characters[line[start]]) {
-                    callback(start);
-                    return;
+                    return start;
                 }
             }
-            callback(length);
+            return length;
         },
         
         /**
