@@ -52,8 +52,8 @@ var HamlView = (function ($) {
     $.extend(haml, {
         //these are the terminal characters that indicate when the parser should stop because a token has been found
         //essentially, when the parser hits one of these, it processes all the text from the previous stopCharacter to the current one
-        stopCharacters: {'.': true, '#': true, '%': true, '{': true, ' ': true, '=': true},
-        multilineStopCharacters: {'.': true, '#': true, '%': true, '{': true, ' ': true, '=': true, '-': true},
+        stopCharacters: {'.': true, '#': true, '%': true, '{': true, ' ': true, '=': true, '(': true},
+        multilineStopCharacters: {'.': true, '#': true, '%': true, '{': true, ' ': true, '=': true, '-': true, '(': true},
         
         //strings representing the different types of compiled javascript
         stringTemplate: ['o.push("', '");'],
@@ -209,6 +209,7 @@ var HamlView = (function ($) {
                             });
                             break;
                         case '{':
+                        case '(':
                             if(!currentTag.haveTag) {
                                 this.error(this.errorMessages.extraOpenBracket, {lineNumber: this.lineIndex, character: c});
                                 break;
@@ -217,12 +218,6 @@ var HamlView = (function ($) {
                             var attr = this.processAttributes(line.substring(c));
                             currentTag.attributes = attr.attributes;
                             c += attr.length;
-                            break;
-                        case '(':
-                            if(!currentTag.haveTag) {
-                                this.error(this.errorMessages.extraOpenBracket, {lineNumber: this.lineIndex, character: c});
-                                break;
-                            }
                             break;
                         case '}':
                         case ')':
@@ -281,13 +276,22 @@ var HamlView = (function ($) {
          *   length: The size of the original attribute string so the main loop can advance accordingly.
          */
         processAttributes: function(str) {
+            var htmlStyle = str.startsWith('(');
+            
+            var attributeStart = '{', attributeSeparator = ',', attributeEnd = '}';
+            if(htmlStyle) {
+                attributeStart = '(';
+                attributeSeparator = ' ';
+                attributeEnd = ')';
+            }
+            
             //trim the opening/closing brackets
-            var endIndex = this.findBalancedStopCharacter(str.substring(1), '}');
+            var endIndex = this.findBalancedStopCharacter(str.substring(1), attributeEnd);
             var strWithoutBrackets = str.substring(1, endIndex+1);
             var strWithBrackets = str.substring(0, endIndex+2);
             var ret;
             
-            // check if they are passing a variable as the attribute
+            // check if they are passing a variable as the attribute - variables cannot have equals or colons, but the three attribute styles must
             if(strWithoutBrackets.indexOf(':') < 0 && strWithoutBrackets.indexOf('=') < 0) {
                 return {attributes: strWithoutBrackets, length: strWithBrackets.length};
             }
@@ -295,36 +299,47 @@ var HamlView = (function ($) {
             //if there are no equals signs then it is definitely not a ruby-style object.
             //an equals sign could be in parentheses though ie: {key: (value = 'value')}, but findBalancedStopCharacter will ignore it
             var equalsIndex = this.findBalancedStopCharacter(strWithoutBrackets, '=');
-            if(equalsIndex === strWithoutBrackets.length) {
+            if(!htmlStyle && equalsIndex === strWithoutBrackets.length) {
                 //we are parsing json style attributes
                 ret = strWithBrackets;
             } else {
-                var jsonStr = '', attributes = [], equalsIndex, attribute, commaIndex, value;
+                var attributes = [], equalsIndex, attributeName, valueStartIndex, value, endIndex;
                 while(strWithoutBrackets.length > 0) {
-                    jsonStr = '';
-                    
                     //find the key, denoted by the =>
                     equalsIndex = this.findBalancedStopCharacter(strWithoutBrackets, '=');
-                    if(equalsIndex+1 < strWithoutBrackets.length && strWithoutBrackets.charAt(equalsIndex+1) == '>') {
-                        attribute = strWithoutBrackets.substring(0, equalsIndex).trim();
-                        if(attribute.startsWith(':')) {
-                            attribute = "'"+attribute.substring(1)+"'";
+                    endIndex = equalsIndex + 1;
+                    attributeName = strWithoutBrackets.substring(0, equalsIndex).trim();
+                    
+                    //if we are using ruby-style syntax, then make sure that the separator is => and not just =
+                    if(!htmlStyle) {
+                        if(equalsIndex+1 < strWithoutBrackets.length && strWithoutBrackets.charAt(equalsIndex+1) == '>') {
+                            //remove the colon from ruby-style symbols
+                            if(attributeName.startsWith(':')) {
+                                attributeName = "'"+attributeName.substring(1)+"'";
+                            }
+                            endIndex++;
+                        } else {
+                            return this.error("Error while parsing the ruby style attributes hash.");
                         }
-                        jsonStr += attribute+': ';
-                        strWithoutBrackets = strWithoutBrackets.substring(equalsIndex+2);
                     } else {
-                        return this.error("Error while parsing the ruby style attributes hash.");
+                        attributeName = "'"+attributeName+"'";
                     }
                     
+                    //remove the attribute and separator
+                    strWithoutBrackets = strWithoutBrackets.substring(endIndex);
+                    
                     //find the value, denoted by a comma or the end of the string
-                    commaIndex = this.findBalancedStopCharacter(strWithoutBrackets, ',');
-                    value = strWithoutBrackets.substring(0, commaIndex).trim();
-                    if(value.startsWith(':')) {
+                    valueStartIndex = this.findBalancedStopCharacter(strWithoutBrackets, attributeSeparator);
+                        
+                    value = strWithoutBrackets.substring(0, valueStartIndex).trim();
+                    if(!htmlStyle && value.startsWith(':')) {
                         value = "'"+value.substring(1)+"'";
                     }
-                    jsonStr += value;
-                    strWithoutBrackets = strWithoutBrackets.substring(commaIndex+1);
-                    attributes.push(jsonStr);
+                    
+                    strWithoutBrackets = strWithoutBrackets.substring(valueStartIndex+1);
+                    //support for later pre-rendering attributes
+                    //attributes.push([attributeName, value]);
+                    attributes.push(attributeName+": "+value);
                 }
                 ret = '{'+attributes.join(', ')+'}';
             }
@@ -544,6 +559,8 @@ var HamlView = (function ($) {
         error: function(message, data) {
             data = data || {}
             data.error = message;
+            
+            if(!data.lineNumber) data.lineNumber = this.lineIndex;
             
             if(data.lineNumber >= 0 && !data.line) {
                 data.line = this.lines[data.lineNumber];
@@ -876,7 +893,9 @@ var HamlView = (function ($) {
             case 'function':
             case 'unknown': return;
             case 'boolean': return object.toString();
-            case 'string': return object;
+            case 'string': 
+            case 'number':
+                return object;
             case 'array': return object.join(',');
         }
     

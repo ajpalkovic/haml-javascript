@@ -26,11 +26,11 @@
           
           - if(result.exception)
             %strong Exception:
-            <br />#{HamlViews.formatObject(result.exception)}<br />
+            <br />#{HamlView.formatObject(result.exception)}<br />
           
           %strong Compiled View:
           %br
-          = result.compiledView.gsub('\n', '<br />')
+          = result.compiledView.replace(/\n/g, '<br />')
             
       %td
         - if(!result.success)

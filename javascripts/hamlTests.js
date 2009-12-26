@@ -16,7 +16,7 @@
  */
 (function($) {
     var views = {
-        attributes: '<div class="class"></div><div class="class"></div><div class="class"></div><div class="class"></div><div id="id" class="class"></div><div id="id" class="class"></div><div id="id" title="{class: \'class\', id: "class"", :noob => /noob/}" class="class"></div><div class="class"></div><div class="class"></div><div class="class" id="id"></div><div class="class" id="id"></div><div class="class" id="id" title="{clas: \'class\', id: "class"", :noob => /noob/}"></div><div class="class" id="id" title="test12"></div><div class="class" id="id" title="test12" alt="alt"></div><div class="class" id="id" title="valuetest12" alt="alt"></div>',
+        attributes: '<div class="class"></div><div class="class"></div><div class="class"></div><div class="class"></div><div id="id" class="class"></div><div id="id" class="class"></div><div id="id" title="{class: \'class\', id: "class"", :noob => /noob/}" class="class"></div><div class="class"></div><div class="class"></div><div class="class" id="id"></div><div class="class" id="id"></div><div class="class" id="id" title="{clas: \'class\', id: "class"", :noob => /noob/}"></div><div class="class" id="id" title="test12"></div><div class="class" id="id" title="test12" alt="alt"></div><div class="class" id="id" title="valuetest12" alt="alt"></div><div class="class"></div><div class="class"></div><div class="class"></div><div class="class"></div><div class="class"></div><div class="class" id="id"></div><div class="class" id="id" title="{clas: \'class\', id: "class"", :noob => /noob/}"></div><div class="class" id="id" title="(class=\'class\' id="class"" noob=/noob/}"></div><div class="class" id="id" title="test12"></div><div class="class" id="id" title="test12" alt="alt"></div><div class="class" id="id" title="valuetest12" alt="alt"></div>',
         empty: '',
         indentationFirstLine: {expectedOutput: '', successFunction: hasError('indentationFirstLine')},
         indentationFirstLine2: {expectedOutput: '', successFunction: hasError('indentationFirstLine')},
@@ -40,6 +40,9 @@
             standard: '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US"><head><title>Hampton Catlin Is Totally Awesome</title><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /></head><body><div class="header">Yes, ladies and gentileman. He is just that egotistical.Fantastic! This should be multi-line output The question is if this would translate! Ahah!20</div><div id="body"> Quotes should be loved! Just like people!</div>01234567891011Wow.|<p>Holy cow        multiline       tags!           A pipe (|) event!PipesIgnored|PipesIgnored|PipesIgnored|1|2|3</p><div class="silent">this shouldn\'t evaluate but now it should!</div><ul class="really cool"><li>a</li><li>b</li><li>c</li><li>d</li><li>e</li><li>f</li></ul><div id="combo" class="of_divs_with_underscore">with this text</div><div class="footer"></div></body></html>'
         }
     };
+    
+    var results = [];
+    var allPassed = true;
     
     /**
      * Splits a line into 80 character chunks for displaying on the screen.
@@ -197,9 +200,7 @@
         }
     }
     
-    var results = [];
     doLoop(views, '');
-    var allPassed = true;
     
     for(var c = 0; c < results.length; c++) {
         var result = results[c];
