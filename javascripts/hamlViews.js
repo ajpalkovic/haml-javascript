@@ -49,6 +49,24 @@ var HamlView = (function ($) {
         this.view = view;
     };
     
+    $.extend(haml, {
+        //these are the terminal characters that indicate when the parser should stop because a token has been found
+        //essentially, when the parser hits one of these, it processes all the text from the previous stopCharacter to the current one
+        stopCharacters: {'.': true, '#': true, '%': true, '{': true, ' ': true, '=': true},
+        multilineStopCharacters: {'.': true, '#': true, '%': true, '{': true, ' ': true, '=': true, '-': true},
+        
+        //strings representing the different types of compiled javascript
+        stringTemplate: ['o.push("', '");'],
+        codeOutputTemplate: ['o.push(', ');'],
+        tagTemplate: ['this.makeTag(', ');'],
+        
+        //a regular expression for matching occurances of #{expression}
+        interpolationRegex: /(^|.|\r|\n)(#\{(.*?)\})/,
+        
+        //the tags that should be autoclosed ie <br />
+        autocloseTags: {'img': true, 'br': true, 'hr': true, 'input': true, 'meta': true}
+    });
+    
     haml.prototype = {    
         /**
          * The compiler processes one line at a time.
@@ -76,16 +94,6 @@ var HamlView = (function ($) {
             
             this.stack = [];
             this.compiledView = [];
-            //these are the terminal characters that indicate when the parser should stop because a token has been found
-            //essentially, when the parser hits one of these, it processes all the text from the previous stopCharacter to the current one
-            this.stopCharacters = {'.': true, '#': true, '%': true, '{': true, ' ': true, '=': true};
-            this.multilineStopCharacters = {'.': true, '#': true, '%': true, '{': true, ' ': true, '=': true, '-': true};
-            this.stringTemplate = ['o.push("', '");'];
-            this.interpolationRegex = /(^|.|\r|\n)(#\{(.*?)\})/;
-            this.codeOutputTemplate = ['o.push(', ');'];
-            this.tagTemplate = ['this.makeTag(', ');'];
-            //the tags that should be autoclosed
-            this.autocloseTags = {'img': true, 'br': true, 'hr': true, 'input': true, 'meta': true};
             this.stringBuffer = [];
             
             //each foreach loop needs a unique number for storing its variables so they do not conflict if there are nested loops
@@ -168,7 +176,7 @@ var HamlView = (function ($) {
                                 break;
                             }
                             currentTag.haveTag = true;
-                            this.findStopCharacter(characters, c+1, this.stopCharacters, function(endIndex) {
+                            this.findStopCharacter(characters, c+1, haml.stopCharacters, function(endIndex) {
                                 currentTag.name = line.substring(c+1, endIndex);
                                 c = endIndex - 1;
                             });
@@ -183,7 +191,7 @@ var HamlView = (function ($) {
                                     currentTag.name = 'div';
                                 }
                                 
-                                this.findStopCharacter(characters, c+1, this.stopCharacters, function(endIndex) {
+                                this.findStopCharacter(characters, c+1, haml.stopCharacters, function(endIndex) {
                                     currentTag.id = line.substring(c+1, endIndex);
                                     c = endIndex - 1;
                                 });
@@ -195,7 +203,7 @@ var HamlView = (function ($) {
                                 currentTag.name = 'div';
                             }
                             
-                            endIndex = this.findStopCharacter(characters, c+1, this.stopCharacters, function(endIndex) {
+                            endIndex = this.findStopCharacter(characters, c+1, haml.stopCharacters, function(endIndex) {
                                 currentTag.classes.push(line.substring(c+1, endIndex));
                                 c = endIndex - 1;
                             });
@@ -388,7 +396,7 @@ var HamlView = (function ($) {
                 text = this.lines[d].trim();
                 
                 //check if it starts with a - or =.  once we have seen two of them, we can stop
-                if(this.multilineStopCharacters[text.substring(0, 1)]) {
+                if(haml.multilineStopCharacters[text.substring(0, 1)]) {
                     if(first) {
                         break;
                     }
@@ -575,15 +583,15 @@ var HamlView = (function ($) {
             //add a new tag to the compiledView buffer
             this.clearStringBuffer();
             var begin = "<"+tag.name;
-            var end = this.autocloseTags[tag.name] ? ' />': '>';
+            var end = haml.autocloseTags[tag.name] ? ' />': '>';
             var classes = tag.classes.join(' ');
             
             
-            this.compiledView.push(this.tagTemplate[0]);
+            this.compiledView.push(haml.tagTemplate[0]);
             this.compiledView.push('"', begin, '","', end, '","', tag.id, '","', classes, '",', tag.attributes.replace('class:', 'clas:'));
-            this.compiledView.push(this.tagTemplate[1], '\n');
+            this.compiledView.push(haml.tagTemplate[1], '\n');
             
-            if(!this.autocloseTags[tag.name]) {
+            if(!haml.autocloseTags[tag.name]) {
                 //null.fail();
                 this.stack.push(['</', tag.name, '>'].join(''));
             } else {
@@ -606,7 +614,7 @@ var HamlView = (function ($) {
         clearStringBuffer: function() {
             //concatenate a static string and add it to the compiled view
             if(this.stringBuffer.length > 0) {
-                this.compiledView.push(this.stringTemplate[0], this.stringBuffer.join(''), this.stringTemplate[1], '\n');
+                this.compiledView.push(haml.stringTemplate[0], this.stringBuffer.join(''), haml.stringTemplate[1], '\n');
                 this.stringBuffer.length = 0;
             }
         },
@@ -621,7 +629,7 @@ var HamlView = (function ($) {
             
             //add javascript code to the compiled view
             this.clearStringBuffer();
-            this.compiledView.push(this.codeOutputTemplate[0], text, this.codeOutputTemplate[1], '\n');
+            this.compiledView.push(haml.codeOutputTemplate[0], text, haml.codeOutputTemplate[1], '\n');
         },
         
         /**
@@ -639,7 +647,7 @@ var HamlView = (function ($) {
             //most of this comes from prototype's gsub method
             var match, beforeMatch;
             while (text.length > 0) {
-                if (match = text.match(this.interpolationRegex)) {
+                if (match = text.match(haml.interpolationRegex)) {
                     //sometimes the match index is off by one.  i have no clue why.
                     var index = match.index;
                     if(text.charAt(index) !== '#') {
