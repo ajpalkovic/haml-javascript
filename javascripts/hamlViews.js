@@ -216,7 +216,7 @@ var HamlView = (function ($) {
                             }
                             
                             var attr = this.processAttributes(line.substring(c));
-                            currentTag.attributes = attr.attributes;
+                            currentTag.attributes.push(attr.attributes);
                             c += attr.length;
                             break;
                         case '}':
@@ -301,7 +301,7 @@ var HamlView = (function ($) {
             var equalsIndex = this.findBalancedStopCharacter(strWithoutBrackets, '=');
             if(!htmlStyle && equalsIndex === strWithoutBrackets.length) {
                 //we are parsing json style attributes
-                ret = strWithBrackets;
+                ret = strWithBrackets.replace('class:', 'clas:')
             } else {
                 var attributes = [], equalsIndex, attributeName, valueStartIndex, value, endIndex;
                 while(strWithoutBrackets.length > 0) {
@@ -324,6 +324,8 @@ var HamlView = (function ($) {
                     } else {
                         attributeName = "'"+attributeName+"'";
                     }
+                    
+                    attributeName.replace(/^class:/g, 'clas:');
                     
                     //remove the attribute and separator
                     strWithoutBrackets = strWithoutBrackets.substring(endIndex);
@@ -585,7 +587,8 @@ var HamlView = (function ($) {
                 id: '',
                 classes: [],
                 name: '',
-                attributes: '{}'
+                //preload with an empty string so we can add the classes ids fro them # and . syntax
+                attributes: [[]]
             };
         },
         
@@ -603,9 +606,17 @@ var HamlView = (function ($) {
             var end = haml.autocloseTags[tag.name] ? ' />': '>';
             var classes = tag.classes.join(' ');
             
+            //add any classes / ids from the # and . syntax at the lowest priority
+            if(tag.id) {
+                tag.attributes[0].push("id: '"+tag.id+"'");
+            }
+            if(classes && classes.length > 0) {
+                tag.attributes[0].push("'class': '"+classes+"'");
+            }
+            tag.attributes[0] = '{'+tag.attributes[0].join(',')+'}';
             
             this.compiledView.push(haml.tagTemplate[0]);
-            this.compiledView.push('"', begin, '","', end, '","', tag.id, '","', classes, '",', tag.attributes.replace('class:', 'clas:'));
+            this.compiledView.push('"', begin, '","', end, '", [', tag.attributes.join(','), "]");
             this.compiledView.push(haml.tagTemplate[1], '\n');
             
             if(!haml.autocloseTags[tag.name]) {
@@ -721,37 +732,40 @@ var HamlView = (function ($) {
         /**
          * This is a runtime function to generate a tag based on its id/class/attributes object
          */
-        makeTag: function(tagBegin, tagEnd, id, clas, attributes) {
+        makeTag: function(tagBegin, tagEnd, attributesList) {
             this.output.push(tagBegin);
-            var type, c;
+            var c, attributes, key, keyName;
             
-            if(attributes.clas) {
-                attributes['class'] = attributes.clas;
-                attributes.clas = undefined;
+            var merged = {};
+            
+            for(c = 0; c < attributesList.length; c++) {
+                attributes = attributesList[c];
+            
+                for(key in attributes) {
+                    keyName = key == 'clas' ? 'class' : key;
+                    if(!attributes[key]) {
+                        continue;
+                    }
+                    
+                    if(key == 'id') {
+                        merged[keyName] = attributes[key];
+                    } else {
+                        if(merged[keyName]) {
+                            merged[keyName] = [merged[keyName], attributes[key]].join(' ');
+                        } else {
+                            merged[keyName] = attributes[key];
+                        }
+                    }
+                }
             }
             
-            if(!attributes.id && id) {
-                attributes.id = id;
-            }
-            
-            if(clas) {
-                if(attributes['class']) {
-                    attributes['class'] = clas+" "+attributes['class'];
-                }
-                else {
-                    attributes['class'] = clas;
-                }
-            }
-            
-            for(var key in attributes) {
-                if(!attributes[key]) {
-                    continue;
-                }
+            for(key in merged) {
                 if(key === 'checked' || key === 'selected') {
-                    attributes[key] = key;
+                    merged[key] = key;
                 }
-                this.output.push(' ', key, '="', attributes[key], '"');
+                this.output.push(' ', key, '="', merged[key], '"');
             }
+            
             this.output.push(tagEnd);
         },
         
