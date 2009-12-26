@@ -83,8 +83,7 @@ var HamlView = (function ($) {
             
             this.errors = [];
             
-            var lines = this.splitLines(this.view);
-            this.lines = lines;
+            var lines = this.lines = this.splitLines(this.view);
             
             this.lineIndex = 0;
             this.linesLength = lines.length;
@@ -98,7 +97,7 @@ var HamlView = (function ($) {
             
             //each foreach loop needs a unique number for storing its variables so they do not conflict if there are nested loops
             this.forEachIndex = 0;
-            //some tags like <br /? should not permit text to be nested in them
+            //some tags like <br /> should not permit text to be nested in them
             this.canIndent = false;
             //store the indentation of the previous so that one cannot indent more than one level at a time
             this.previousIndentation = 0;
@@ -114,7 +113,6 @@ var HamlView = (function ($) {
                 }
                 //turn the line into a character array
                 characters = line.split("");
-                
                 whitespaceOffset = this.processWhitespace(characters);
                 lineLength = characters.length;
                 
@@ -152,20 +150,17 @@ var HamlView = (function ($) {
                             c = lineLength;
                             break;
                         case '=':
-                            if(currentTag.haveTag) {
-                                this.pushTag(currentTag);
-                                currentTag = this.resetTag();
-                            } else {
-                                //this is an empty equals on a line which means there should be no indentation after it
-                                this.canIndent = false;
-                            }
-                            
+                            currentTag = this.clearTagIfExists(currentTag);
                             this.pushCodeOutput(this.concatenateMultilineString(line, c));
                             c = lineLength;
                             break;
                         case '%':
                             if(this.checkTagError(currentTag.haveTag, 'extraPercent')) break;
                             c = this.updateTagAttribute(currentTag, 'name', characters, c);
+                            break;
+                        case '.':
+                            this.setDefaultTagIfNone(currentTag);
+                            c = this.updateTagAttribute(currentTag, 'classes', characters, c);
                             break;
                         case '#':
                             if(characters[c+1] === '{') {
@@ -176,14 +171,9 @@ var HamlView = (function ($) {
                                 c = this.updateTagAttribute(currentTag, 'id', characters, c);
                             }
                             break;
-                        case '.':
-                            this.setDefaultTagIfNone(currentTag);
-                            c = this.updateTagAttribute(currentTag, 'classes', characters, c);
-                            break;
                         case '{':
                         case '(':
                             if(this.checkTagError(!currentTag.haveTag, 'extraOpenBracket', c)) break;
-                            
                             var attr = this.processAttributes(line.substring(c));
                             currentTag.attributes.push(attr.attributes);
                             c += attr.length-1;
@@ -193,21 +183,9 @@ var HamlView = (function ($) {
                             this.error(this.errorMessages.extraCloseBracket, {lineNumber: this.lineIndex, character: c});
                             break;
                         case ' ':
-                            if(currentTag.haveTag) {
-                                this.pushTag(currentTag);
-                                currentTag = this.resetTag();
-                            }
-                            this.pushInterpolatedString(line.substring(c+1));
-                            c = lineLength;
-                            break;
+                            c++; //ignore spaces right after a tag name and add the rest as interpolated text
                         default:
-                            if(currentTag.haveTag) {
-                                this.pushTag(currentTag);
-                                currentTag = this.resetTag();
-                            } else {
-                                //this is blank text on a line so there should be no indenting
-                                this.canIndent = false;
-                            }
+                            currentTag = this.clearTagIfExists(currentTag);
                             this.pushInterpolatedString(line.substring(c));
                             c = lineLength;
                             break;
@@ -221,20 +199,37 @@ var HamlView = (function ($) {
             }
             
             if(this.errors.length === 0) {
-                //Now that every line has processed, clear any remaining data in the buffers
+                //Now that every line has processed, clear any remaining data in the buffers and eval the code
                 this.processWhitespace('');
                 this.clearStringBuffer();
-                
-                //Put the code in an anonymous function so it can be eval'd once and then called repeatedly, making it a lot faster
-                //Kudos to ejs for this idea
-                var defaultsString = '{';
-                if(this.defaults.length > 0) {
-                    defaultsString = "var defaults = "+this.defaults+"; with(defaults) {";
-                }
-                var evalString = "this.renderFunction = function(data, helpers) { "+defaultsString+" with(data) { with(helpers) { var o = this.output; "+this.compiledView.join('')+" return o.join(\"\"); } } } };";
-                this.debugStr = evalString;
-                eval(evalString);
+                return this.evalCode();
             }
+        },
+        
+        /**
+         * Put the code in an anonymous function so it can be eval'd once and then called repeatedly, making it a lot faster.
+         * Any default variable values or values passed to the render function are placed in with blocks so that they are available as local variables.
+         * Kudos to ejs for this idea
+         */
+        createEvalString: function() {
+            var defaultsString = '{';
+            if(this.defaults.length > 0) {
+                defaultsString = "var defaults = "+this.defaults+"; with(defaults) {";
+            }
+            var evalString = "this.renderFunction = function(data, helpers) { "+defaultsString+" with(data) { with(helpers) { var o = this.output; "+this.compiledView.join('')+" return o.join(\"\"); } } } };";
+            this.debugStr = evalString;
+            
+            return evalString;
+        },
+        
+        /**
+         * Evals the executable javascript code once and stores it in a function so it never needs to be eval'd again.
+         * TODO: Integrate with JSLINT like EJS intelligently did.
+         */
+        evalCode: function() {
+            var evalString = this.createEvalString();
+            
+            return eval(evalString);  
         },
         
         /**
@@ -246,6 +241,17 @@ var HamlView = (function ($) {
                 tag.haveTag = true;
                 tag.name = 'div';
             }
+        },
+        
+        /**
+         * Resets the tag if it has been set.
+         */
+        clearTagIfExists: function(tag) {
+            if(tag.haveTag) {
+                this.pushTag(tag);
+                tag = this.resetTag();
+            }
+            return tag;
         },
         
         /**

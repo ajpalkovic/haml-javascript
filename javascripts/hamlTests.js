@@ -29,7 +29,7 @@
         interpolation: '3#{1+2}\\#{1+2}"3"#{1+2}<div class="tag">3</div><div class="tag">#{1+2}</div><div class="tag">33#{1+2} 3</div><div class="tag">Testing3Testing</div><div class="tag">3</div>',
         defaultVariables: 'truehi',
         defaultVariablesNotUsed: {data: {variable1: false, variable2: 'bye'}, expectedOutput: 'falsebye'},
-        tagContents: '<div>3</div><div>3Testing</div><div>Testing3</div>',
+        tagContents: '<div>3</div><div>3Testing</div><div>Testing3Testing</div>',
         cssClasses: '<div class="class"></div><div class="class"></div><div class="class"></div><div class="class"></div><div class="class class2"></div><div class="class class2"></div><div class="class class2"></div>',
         cssIds: '<div id="id1"></div><div id="id1"></div><div id="id2"></div><div id="id2"></div><div id="id3"></div>',
         multiline: '63+ 3<div>3<div></div></div><div>3<div>3</div></div>3',
