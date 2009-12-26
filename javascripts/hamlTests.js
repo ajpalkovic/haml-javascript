@@ -45,6 +45,15 @@
     var allPassed = true;
     
     /**
+     * Splits a string by whitespace, returning an array of the bits.
+     */
+    var $w = function(string) {
+        if (typeof string != 'string') return [];
+        string = string.trim();
+        return string ? string.split(/\s+/) : [];
+    }
+    
+    /**
      * Splits a line into 80 character chunks for displaying on the screen.
      * It splits at the end of the first tag seen after 80 characters.
      */
@@ -172,7 +181,7 @@
         try {
             view = $.Views.get('tests/'+name);
             view.compile();
-            html = view.render(data);
+            html = view.render(data, {'$w': $w});
             var success = html === expectedResult;
             if(success && successFunction) {
                 success = successFunction(view, html);
@@ -252,7 +261,7 @@
             
             start = new Date();
             for(var d = 0; d < runs; d++) {
-                result.view.render(result.data);
+                result.view.render(result.data, {'$w': $w});
             }
             end = new Date();
             result.renderTime = end - start;

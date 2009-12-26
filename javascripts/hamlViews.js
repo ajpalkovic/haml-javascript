@@ -939,15 +939,6 @@ var HamlView = (function ($) {
         return '<dl>' + results.join(' ') + '</dl>';
     };
     
-    /**
-     * Splits a string by whitespace, returning an array of the bits.
-     */
-    function $w(string) {
-        if (typeof string != 'string') return [];
-        string = string.trim();
-        return string ? string.split(/\s+/) : [];
-    }
-    
     $.extend(String.prototype, {
         trim: String.prototype.trim || function() {
             var str = this.replace(/^\s\s*/, ''),
