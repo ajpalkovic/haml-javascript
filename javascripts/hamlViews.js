@@ -137,14 +137,17 @@ var HamlView = (function ($) {
                                 break;
                             }
                         case '-':
-                            if(this.checkTagError(currentTag.haveTag, 'extraDash')) break;
-                            
-                            //check if it is a custom for loop
-                            var text = this.concatenateMultilineString(line, c);
-                            if(text.startsWith('for') && text.include(' in ') && !text.substring(3).trim().startsWith('(')) {
-                                this.processForEach(text);
-                            } else {
-                                this.compiledView.push(this.processBracket(text), '\n');
+                            //support haml comments
+                            if(c+1 < lineLength && characters[c+1] != '#') {
+                                if(this.checkTagError(currentTag.haveTag, 'extraDash')) break;
+                                
+                                //check if it is a custom for loop
+                                var text = this.concatenateMultilineString(line, c);
+                                if(text.startsWith('for') && text.include(' in ') && !text.substring(3).trim().startsWith('(')) {
+                                    this.processForEach(text);
+                                } else {
+                                    this.compiledView.push(this.processBracket(text), '\n');
+                                }
                             }
                             
                             c = lineLength;
