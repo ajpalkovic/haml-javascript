@@ -330,6 +330,8 @@ var HamlView = (function ($) {
                             //remove the colon from ruby-style symbols
                             if(attributeName.startsWith(':')) {
                                 attributeName = "'"+attributeName.substring(1)+"'";
+                            } else if (attributeName.startsWith('class:')) {
+                                attributeName = 'clas:';
                             }
                             endIndex++;
                         } else {
@@ -338,8 +340,6 @@ var HamlView = (function ($) {
                     } else {
                         attributeName = "'"+attributeName+"'";
                     }
-                    
-                    attributeName.replace(/^class:/g, 'clas:');
                     
                     //remove the attribute and separator
                     strWithoutBrackets = strWithoutBrackets.substring(endIndex);
