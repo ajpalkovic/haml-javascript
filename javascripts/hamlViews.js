@@ -54,7 +54,7 @@ var HamlView = (function ($) {
     $.extend(haml, {
         //these are the terminal characters that indicate when the parser should stop because a token has been found
         //essentially, when the parser hits one of these, it processes all the text from the previous stopCharacter to the current one
-        stopCharacters: {'.': true, '#': true, '%': true, '{': true, ' ': true, '=': true, '(': true},
+        stopCharacters: {'.': true, '#': true, '%': true, '{': true, ' ': true, '=': true, '(': true, '/': true},
         multilineStopCharacters: {'.': true, '#': true, '%': true, '{': true, ' ': true, '=': true, '-': true, '(': true},
         
         //strings representing the different types of compiled javascript
@@ -66,7 +66,7 @@ var HamlView = (function ($) {
         interpolationRegex: /(^|.|\r|\n)(#\{(.*?)\})/,
         
         //the tags that should be autoclosed ie <br />
-        autocloseTags: {'img': true, 'br': true, 'hr': true, 'input': true, 'meta': true}
+        autocloseTags: {'img': true, 'br': true, 'hr': true, 'input': true, 'meta': true, 'link': true}
     });
     
     haml.prototype = {    
@@ -138,18 +138,22 @@ var HamlView = (function ($) {
                                 break;
                             }
                         case '/':
-                            line = line.substring(c+1);
-                            var start = '<!--', end = ' -->';
-                            if(line.charAt(0) == '[') {
-                                var endIndex = this.findBalancedStopCharacter(line.substring(1), ']');
-                                start += line.substring(0, endIndex+2)+'>';
-                                line = line.substring(endIndex+2);
-                                end = ' <![endif]-->'
+                            if(currentTag.haveTag) {
+                                currentTag.autoClose = true;
+                            } else {
+                                line = line.substring(c+1);
+                                var start = '<!--', end = ' -->';
+                                if(line.charAt(0) == '[') {
+                                    var endIndex = this.findBalancedStopCharacter(line.substring(1), ']');
+                                    start += line.substring(0, endIndex+2)+'>';
+                                    line = line.substring(endIndex+2);
+                                    end = ' <![endif]-->'
+                                }
+                                this.pushString(start+" ");
+                                this.pushInterpolatedString(line);
+                                this.stack.push(end);
+                                c = lineLength;
                             }
-                            this.pushString(start+" ");
-                            this.pushInterpolatedString(line);
-                            this.stack.push(end);
-                            c = lineLength;
                             break;
                         case '@':
                             //if we are at the beginning of the line, then this is specifying default variable values.
@@ -573,7 +577,7 @@ var HamlView = (function ($) {
          */
         processBracket: function(line) {
             var text = line.trim();
-            if(text.startsWith('if') || text.startsWith('else') || text.startsWith('for')  || text.startsWith('while')) {
+            if(text.startsWith('if') || text.startsWith('else') || text.startsWith('for')  || text.startsWith('while') || text.startsWith('switch')) {
                 if(text.lastIndexOf('{') !== text.length-1) {
                     this.stack.push('}');
                     return line + ' {';
@@ -662,6 +666,7 @@ var HamlView = (function ($) {
         resetTag: function() {
             return {
                 haveTag: false,
+                autoClose: false,
                 id: '',
                 classes: [],
                 name: '',
@@ -681,7 +686,9 @@ var HamlView = (function ($) {
             //add a new tag to the compiledView buffer
             this.clearStringBuffer();
             var begin = "<"+tag.name;
-            var end = haml.autocloseTags[tag.name] ? ' />': '>';
+            //autoclose only when exactly one of the two variables is true.  if both are true, we have something like content in a <br> tag
+            var autoClose = haml.autocloseTags[tag.name] ^ tag.autoClose;
+            var end = autoClose ? ' />': '>';
             var classes = tag.classes.join(' ');
             
             //add any classes / ids from the # and . syntax at the lowest priority
@@ -697,8 +704,7 @@ var HamlView = (function ($) {
             this.compiledView.push('"', begin, '","', end, '", [', tag.attributes.join(','), "]");
             this.compiledView.push(haml.tagTemplate[1], '\n');
             
-            if(!haml.autocloseTags[tag.name]) {
-                //null.fail();
+            if(!autoClose) {
                 this.stack.push(['</', tag.name, '>'].join(''));
             } else {
                 this.canIndent = false;
