@@ -128,7 +128,8 @@ var HamlView = (function ($) {
                     switch(cur) {
                         case '\\':
                             currentTag = this.clearTagIfExists(currentTag);
-                            this.pushInterpolatedString(line.substring(c+1));
+                            this.pushString(line.charAt(c+1));
+                            this.pushInterpolatedString(line.substring(c+2));
                             c = lineLength;
                             break;
                         case '!':

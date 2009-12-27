@@ -28,7 +28,7 @@
         oneLine: '<div>There is one line in this file.</div>',
         tabIndentation: '<div class="one"><div class="two"><div class="three"></div></div></div><div class="four"><div class="five"><div class="six"></div></div><div class="seven"></div></div>',
         threeSpacesIndentation: '<div class="one"><div class="two"><div class="three"></div></div></div><div class="four"><div class="five"><div class="six"></div></div><div class="seven"></div></div>',
-        interpolation: '3#{1+2}\\#{1+2}"3"#{1+2}<div class="tag">3</div><div class="tag">#{1+2}</div><div class="tag">33#{1+2} 3</div><div class="tag">Testing3Testing</div><div class="tag">3</div>',
+        interpolation: '3#{1+2}\\3\\#{1+2}"3"#{1+2}<div class="tag">3</div><div class="tag">#{1+2}</div><div class="tag">33#{1+2} 3</div><div class="tag">Testing3Testing</div><div class="tag">3</div>',
         defaultVariables: 'truehi',
         defaultVariablesNotUsed: {data: {variable1: false, variable2: 'bye'}, expectedOutput: 'falsebye'},
         tagContents: '<div>3</div><div>3Testing</div><div>Testing3Testing</div>1+2<div>1+2</div>',
