@@ -595,7 +595,11 @@ var HamlView = (function ($) {
                 }
             }
             
-            if(text.lastIndexOf('{') !== text.length-1) {
+            //take care of cases like these:
+            //if(true) {
+            //if(true) doit();
+            //if(true) { doit(); }
+            if(text.lastIndexOf('{') !== text.length-1 && text.lastIndexOf(';') !== text.length-1 && text.lastIndexOf('}') !== text.length-1) {
                 //else blocks are evil because they have no body of code so there is no need to wrap it with parentheses, just brackets
                 if(matchIndex < 0 && text.startsWith('else')) {
                     this.stack.push('}');
@@ -755,8 +759,11 @@ var HamlView = (function ($) {
         clearStringBuffer: function() {
             //concatenate a static string and add it to the compiled view
             if(this.stringBuffer.length > 0) {
-                this.compiledView.push(haml.stringTemplate[0], this.stringBuffer.join(''), haml.stringTemplate[1], '\n');
-                this.stringBuffer.length = 0;
+                var str = this.stringBuffer.join('');
+                if(str.length > 0) {
+                    this.compiledView.push(haml.stringTemplate[0], str, haml.stringTemplate[1], '\n');
+                    this.stringBuffer.length = 0;
+                }
             }
         },
         
