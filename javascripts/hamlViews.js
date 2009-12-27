@@ -171,9 +171,14 @@ var HamlView = (function ($) {
                             c = lineLength;
                             break;
                         case '=':
-                            currentTag = this.clearTagIfExists(currentTag);
-                            this.pushCodeOutput(this.concatenateMultilineString(line, c));
-                            c = lineLength;
+                            //ignore a double equals sign.  also worry about the case with an empty equals on a line
+                            if(lineLength === c+1 || characters[c+1] != '=') {
+                                currentTag = this.clearTagIfExists(currentTag);
+                                this.pushCodeOutput(this.concatenateMultilineString(line, c));
+                                c = lineLength;
+                            } else {
+                                c += 2;
+                            }
                             break;
                         case '%':
                             if(this.checkTagError(currentTag.haveTag, 'extraPercent')) break;
