@@ -125,7 +125,17 @@ var HamlView = (function ($) {
                     cur = characters[c];
                     switch(cur) {
                         case '/':
-                            //ignore single line comments by moving the counter to the end of the line
+                            line = line.substring(c+1);
+                            var start = '<!--', end = ' -->';
+                            if(line.charAt(0) == '[') {
+                                var endIndex = this.findBalancedStopCharacter(line.substring(1), ']');
+                                start += line.substring(0, endIndex+2)+'>';
+                                line = line.substring(endIndex+2);
+                                end = ' <![endif]-->'
+                            }
+                            this.pushString(start+" ");
+                            this.pushInterpolatedString(line);
+                            this.stack.push(end);
                             c = lineLength;
                             break;
                         case '@':

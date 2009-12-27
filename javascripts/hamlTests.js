@@ -16,6 +16,7 @@
  */
 (function($) {
     var views = {
+        comments: '<!--  comment --><!-- comment --><!--[if IE]>  comment <![endif]--><!--[if IE]> comment3 <![endif]--><!-- commentcomment -->no comment',
         attributes: '<div class="class"></div><div class="class"></div><div class="class"></div><div class="class"></div><div class="class" id="id"></div><div class="class" id="id"></div><div class="class" id="id" title="{class: \'class\', id: "class"", :noob => /noob/}"></div><div class="class"></div><div class="class" id="id"></div><div class="class" id="id"></div><div class="class" id="id" title="{class: \'class\', id: "class"", :noob => /noob/}"></div><div class="class" id="id" title="test12"></div><div class="class" id="id" title="test12" alt="alt"></div><div class="class" id="id" title="valuetest12" alt="alt"></div><div class="class"></div><div class="class"></div><div class="class"></div><div class="class"></div><div class="class"></div><div class="class" id="id"></div><div class="class" id="id" title="{class: \'class\', id: "class"", :noob => /noob/}"></div><div class="class" id="id" title="(class=\'class\' id="class"" noob=/noob/}"></div><div class="class" id="id" title="test12"></div><div class="class" id="id" title="test12" alt="alt"></div><div class="class" id="id" title="valuetest12" alt="alt"></div><div class="class" id="id" title="title" alt="alt"></div>',
         empty: '',
         indentationFirstLine: {expectedOutput: '', successFunction: hasError('indentationFirstLine')},
