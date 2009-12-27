@@ -126,6 +126,11 @@ var HamlView = (function ($) {
                 for(c = whitespaceOffset; c < lineLength; c++) {
                     cur = characters[c];
                     switch(cur) {
+                        case '\\':
+                            currentTag = this.clearTagIfExists(currentTag);
+                            this.pushInterpolatedString(line.substring(c+1));
+                            c = lineLength;
+                            break;
                         case '!':
                             if(lineLength > c+2 && characters[c+1] == '!' && characters[c+2] == '!') {
                                 this.pushString(this.getDoctype(line.substring(c)));

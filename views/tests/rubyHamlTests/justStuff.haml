@@ -20,3 +20,53 @@
 %p== Embedded? #{"twice! "}!
 %p== Embedded? #{"one"} af"t"er #{"another"}!
 = "stuff followed by whitespace"
+  
+- if(true)
+
+  %strong block with whitespace
+%p
+  \Escape
+  \- character
+  \%p foo
+  \yee\ha
+/ Short comment
+/
+  This is a block comment
+  cool, huh?
+  %strong there can even be sub-tags!
+  = "Or script!"
+-# Haml comment
+%p{ :class => "" } class attribute should appear!
+%p{ :gorbachev => null } this attribute shouldn't appear
+/[if lte IE6] conditional comment!
+/[if gte IE7]
+  %p Block conditional comment
+  %div
+    %h1 Cool, eh?
+/[if gte IE5.2]
+  Woah a period.
+= "test" +|
+  "test" |
+-# Hard tabs shouldn't throw errors.
+	
+- switch('foo')
+  - case 'bar':
+    %meta{ :foo => 'blah'}
+    - break;
+  - case 'foo':
+    %meta{ :foo => 'bar'}
+    -break;
+%img
+%hr
+%link
+%script Inline content
+%br
+  Nested content
+== #{"Woah inner quotes"}
+%p.dynamic_quote{:quotes => "single '", :dyn => 1 + 2}
+%p.dynamic_self_closing{:dyn => 1 + 2}/
+%body
+  hello
+  %div
+
+    %img
