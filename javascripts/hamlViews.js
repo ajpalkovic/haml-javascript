@@ -56,6 +56,7 @@ var HamlView = (function ($) {
         //essentially, when the parser hits one of these, it processes all the text from the previous stopCharacter to the current one
         stopCharacters: {'.': true, '#': true, '%': true, '{': true, ' ': true, '=': true, '(': true, '/': true},
         multilineStopCharacters: {'.': true, '#': true, '%': true, '{': true, ' ': true, '=': true, '-': true, '(': true},
+        autoAddParenthesesTerminals: ['if', /else\s+if/, 'for', 'while', 'switch'],
         
         //strings representing the different types of compiled javascript
         stringTemplate: ['__o.push("', '");'],
@@ -577,13 +578,40 @@ var HamlView = (function ($) {
          * Surrounds a block of code with brackets as a conveince
          */
         processBracket: function(line) {
-            var text = line.trim();
-            if(text.startsWith('if') || text.startsWith('else') || text.startsWith('for')  || text.startsWith('while') || text.startsWith('switch')) {
-                if(text.lastIndexOf('{') !== text.length-1) {
-                    this.stack.push('}');
-                    return line + ' {';
+            var text = line.ltrim(), matchIndex = -1, key;
+            for(var c = 0; c < haml.autoAddParenthesesTerminals.length; c++) {
+                key = haml.autoAddParenthesesTerminals[c];
+                if(typeof key === 'string') {
+                    if(text.startsWith(key)) {
+                        matchIndex = key.length;
+                        break;
+                    }
+                } else {
+                    var result = text.match(key);
+                    if(result) {
+                        matchIndex = result[0].length;
+                        break;
+                    }
                 }
             }
+            
+            if(text.lastIndexOf('{') !== text.length-1) {
+                //else blocks are evil because they have no body of code so there is no need to wrap it with parentheses, just brackets
+                if(matchIndex < 0 && text.startsWith('else')) {
+                    this.stack.push('}');
+                    return line+' {';
+                }
+            
+                //if it starts with one of the keywords and id does not end with a bracket, then we will wrap it in parentheses and brackets
+                if(matchIndex > 0) {
+                    var keyword = text.substring(0, matchIndex);
+                    var body = text.substring(matchIndex);
+                    
+                    this.stack.push('}');
+                    return [keyword, '(', body, ')', ' {'].join('');
+                }
+            }
+            
             this.stack.push('');
             return line;
         },
@@ -1014,6 +1042,14 @@ var HamlView = (function ($) {
     };
     
     $.extend(String.prototype, {
+        ltrim: function() {
+            return this.replace(/^\s+/,"");
+        },
+        
+        rtrim: function() {
+            return this.replace(/\s+$/,"");
+        },
+
         trim: String.prototype.trim || function() {
             var str = this.replace(/^\s\s*/, ''),
             ws = /\s/, i = str.length;
