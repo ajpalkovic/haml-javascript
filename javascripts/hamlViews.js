@@ -42,7 +42,9 @@
  *     remove parentheses dependency
  */
 var HamlView = (function ($) {
-    var undefined;
+    var undefined, options = {
+        xhtml: true
+    };
     var haml = function(name, view) {
         this.compiledView = null;
         this.name = name;
@@ -124,6 +126,12 @@ var HamlView = (function ($) {
                 for(c = whitespaceOffset; c < lineLength; c++) {
                     cur = characters[c];
                     switch(cur) {
+                        case '!':
+                            if(lineLength > c+2 && characters[c+1] == '!' && characters[c+2] == '!') {
+                                this.pushString(this.getDoctype(line.substring(c)));
+                                c = lineLength;
+                                break;
+                            }
                         case '/':
                             line = line.substring(c+1);
                             var start = '<!--', end = ' -->';
@@ -216,6 +224,39 @@ var HamlView = (function ($) {
                 this.processWhitespace('');
                 this.clearStringBuffer();
                 return this.evalCode();
+            }
+        },
+        
+        getDoctype: function(line) {
+            line = line.substring(3).toLowerCase().trim();
+            var bits = line.split(/\s+/);
+            
+            if(line.startsWith('xml')) {
+                var encoding = bits[1] || "utf-8";
+                return "<?xml version='1.0' encoding='"+encoding+"' ?>"
+            }
+            
+            if(options.html5) {
+                return '<!DOCTYPE html>'
+            }
+            var version = bits[1], type = bits[0];
+            if(!parseFloat(bits[1], 10) && !!parseFloat(bits[0], 10)) {
+                version = bits[0];
+                type = bits[1];
+            }
+            
+            if(options.xhtml) {
+                if(version == '1.1') return '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">';    
+                if(version == '5') return '<!DOCTYPE html>';
+                if(type == 'strict') return '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">';
+                else if(type == 'frameset') return '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Frameset//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-frameset.dtd">';
+                else if(type == 'mobile') return '<!DOCTYPE html PUBLIC "-//WAPFORUM//DTD XHTML Mobile 1.2//EN" "http://www.openmobilealliance.org/tech/DTD/xhtml-mobile12.dtd">';
+                else if(type == 'basic') return '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML Basic 1.1//EN" "http://www.w3.org/TR/xhtml-basic/xhtml-basic11.dtd">';
+                else return '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">';
+            } else {
+                if(type == 'strict') return '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">';
+                else if(type == 'frameset') return '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Frameset//EN" "http://www.w3.org/TR/html4/frameset.dtd">';
+                else return '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">';
             }
         },
         
